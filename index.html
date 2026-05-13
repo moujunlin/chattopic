@@ -296,13 +296,29 @@ function TopicPage({ goTo }) {
 
   useEffect(() => {
     setTimeout(() => setLd(true), 100);
-    pickCard();
+    loadLatest();
   }, []);
+
+  const loadLatest = async () => {
+    setLoading(true);
+    const all = await api('cards');
+    if (!all || !Array.isArray(all) || all.length === 0) { setCard(null); setLoading(false); return; }
+    const active = all.filter(c => c.status === 'active').sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+    const open = all.filter(c => c.status === 'open').sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+    setCard(active[0] || open[0] || all[0] || null);
+    setLoading(false);
+  };
 
   const pickCard = async () => {
     setLoading(true);
     const c = await api('cards?pick=true&by=maomao');
-    setCard(c && !c.error ? c : null);
+    if (c && !c.error) { setCard(c); setLoading(false); return; }
+    const all = await api('cards');
+    if (all && Array.isArray(all)) {
+      const pool = all.filter(c => c.status === 'open' && c.created_by !== 'maomao');
+      if (pool.length) { setCard(pool[Math.floor(Math.random() * pool.length)]); setLoading(false); return; }
+    }
+    setCard(null);
     setLoading(false);
   };
 
